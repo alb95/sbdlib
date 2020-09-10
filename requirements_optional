@@ -1,0 +1,5 @@
+'''
+package_a == 1.0.0
+package_b >= 1.2.2
+package_c == 2.1.2
+'''
