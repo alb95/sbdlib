@@ -3,21 +3,24 @@ from scipy.sparse.linalg import expm_multiply
 from numpy import ones, dot
 
 
-def total_communicability(G):
+def total_communicability(G, t=None):
 
     '''
     :param G: a networkx/igraph object
+    :param t: optional parameter for t
     :return: a numpy vector denoting the total communicability of graph G
     '''
 
-   # G = convert_graph_formats(G,nx.graph) if the file is an igraph file, convert it to networkx
+   # G = convert_graph_formats(G,nx.graph)
     n = G.number_of_nodes()
-    e = ones(n)   #vector of all ones
+    e = ones(n)  # vector of all ones
     Adj = nx.adjacency_matrix(G)
+    if t is not None:
+        Adj = Adj*t
     tot_communicability = expm_multiply(Adj, e)
     return tot_communicability
 
-def subgraph_total_communicability(G, k):
+def subgraph_total_communicability(G, k, t=None):
 
     '''
     :param G: a networkx/igraph object
@@ -28,11 +31,13 @@ def subgraph_total_communicability(G, k):
     n = G.number_of_nodes()
     e = ones(n)  # vector of all ones
     Adj = nx.adjacency_matrix(G)
+    if t is not None:
+        Adj = Adj*t
     tot_communicability = expm_multiply(Adj, e)
 
     return tot_communicability[k]
 
-def network_communicability(G):
+def network_communicability(G, t=None):
 
     '''
     :param G: a networkx/igraph object
@@ -43,6 +48,8 @@ def network_communicability(G):
     n = G.number_of_nodes()
     e = ones(n)  # vector of all ones
     Adj = nx.adjacency_matrix(G)
+    if t is not None:
+        Adj=Adj*t
     tot_communicability = expm_multiply(Adj, e)
     net_communicability= dot(e,tot_communicability)
     return net_communicability
