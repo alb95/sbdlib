@@ -6,8 +6,10 @@ from numpy import ones, dot
 def total_communicability(G, t=None):
 
     '''
+    compute the total communicability of graph G
     :param G: a networkx/igraph object
-    :param t: optional parameter for t
+    :param t: scalar, optional; when exponentiate multiply the adjacency matrix by t
+
     :return: a numpy vector denoting the total communicability of graph G
     '''
 
@@ -24,6 +26,8 @@ def subgraph_total_communicability(G, k, t=None):
 
     '''
     :param G: a networkx/igraph object
+    :param t: scalar, optional; when exponentiate multiply the adjacency matrix by t
+
     :return: total communicability of node k
     '''
 
@@ -41,6 +45,8 @@ def network_communicability(G, t=None):
 
     '''
     :param G: a networkx/igraph object
+    :param t: scalar, optional; when exponentiate multiply the adjacency matrix by t
+
     :return: network communicability
     '''
 
