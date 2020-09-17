@@ -1,0 +1,119 @@
+import dynetx as dn
+import networkx as nx
+from numpy import ones
+from numpy.linalg import norm
+from scipy.sparse.linalg import cg
+from scipy.sparse import identity
+
+
+
+def graph_slice(g, t):
+
+    '''
+    extract a slice of the dynamic graph at time t in NetworkX format
+    
+    :param g: dynetx graph
+    :param t: snapshot time
+    
+    :return s: networkx graph
+    '''
+    
+    node_list = g.nodes()
+    slice_t = list(dn.interactions(g, t=t))
+    edge_list = ([e[0], e[1]] for e in slice_t)
+    sliced_graph = nx.Graph()
+    sliced_graph.add_nodes_from(node_list)
+    sliced_graph.add_edges_from(edge_list)
+    return sliced_graph
+
+
+def broadcast_centrality(g, alpha=0.1):
+
+    '''
+    compute the broadcast centrality of the dynamic graph
+    
+    :param g: dynetx graph
+    :param alpha: optional
+    '''
+
+    time_snapshots = g.temporal_snapshots_ids()
+    n = g.number_of_nodes()
+    e = ones(n)  # vector of all ones
+    bc = e
+    for t in time_snapshots[::-1]:
+        g_t = graph_slice(g, t)
+        Adj_t = nx.adjacency_matrix(g_t)
+        bc = cg(identity(n)- alpha*Adj_t, bc)
+        if bc[1]!=0:
+            raise ValueError('convergence not achieved')
+        bc = bc[0]
+        if any(bc != 0):
+            bc = bc/norm(bc)
+    return bc
+
+def receive_centrality(g, alpha=0.1):
+
+    '''
+    compute the receive centrality of the dynamic graph
+    
+    :param g: dynetx graph
+    :param alpha: optional
+    '''
+    
+    time_snapshots = g.temporal_snapshots_ids()
+    n = g.number_of_nodes()
+    e = ones(n)  # vector of all ones
+    rc = e
+    for t in time_snapshots:
+        g_t = graph_slice(g, t)
+        Adj_t = nx.adjacency_matrix(g_t)
+        rc = cg(identity(n)- alpha*Adj_t, rc)
+        if rc[1]!=0:
+            raise ValueError('convergence not achieved')
+        rc = rc[0]
+        if any(rc != 0):
+            rc = rc / norm(rc)
+    return rc
+
+def first_order_broadcast_centrality(g, alpha=0.1):
+
+    '''
+    compute the first-order broadcast centrality of the dynamic graph
+    
+    :param g: dynetx graph
+    :param alpha: optional
+    '''
+    
+    time_snapshots = g.temporal_snapshots_ids()
+    n = g.number_of_nodes()
+    e = ones(n)  # vector of all ones
+    bc = e
+    for t in time_snapshots[::-1]:
+        g_t = graph_slice(g, t)
+        Adj_t = nx.adjacency_matrix(g_t)
+        bc = (identity(n) + alpha*Adj_t)*bc
+        if any(bc != 0):
+            bc = bc/norm(bc)
+    return bc
+
+
+def first_order_receive_centrality(g, alpha=0.1):
+
+    '''
+    compute the first-order receive centrality of the dynamic graph
+    
+    :param g: dynetx graph
+    :param alpha: optional
+    '''
+    
+    time_snapshots = g.temporal_snapshots_ids()
+    n = g.number_of_nodes()
+    e = ones(n)  # vector of all ones
+    rc = e
+    for t in time_snapshots:
+        g_t = graph_slice(g, t)
+        Adj_t = nx.adjacency_matrix(g_t)
+        rc = (identity(n) + alpha*Adj_t)*rc
+        if any(rc != 0):
+            rc = rc/norm(rc)
+    return rc
