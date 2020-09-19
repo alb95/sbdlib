@@ -7,44 +7,41 @@ def total_communicability(G, t=None):
 
     '''
     compute the total communicability of graph G
-    :param G: a networkx/igraph object
+    :param G: a networkx object
     :param t: scalar, optional; when exponentiate multiply the adjacency matrix by t
 
-    :return: a numpy vector denoting the total communicability of graph G
+    :return: a dictionary with the total communicability of graph G
     '''
 
    # G = convert_graph_formats(G,nx.graph)
     n = G.number_of_nodes()
+    node_list = G.nodes
     e = ones(n)  # vector of all ones
     Adj = nx.adjacency_matrix(G)
     if t is not None:
         Adj = Adj*t
     tot_communicability = expm_multiply(Adj, e)
-    return tot_communicability
+    centrality = dict(zip(node_list, tot_communicability))
+    return centrality
 
-def subgraph_total_communicability(G, k, t=None):
+def node_total_communicability(G, node_name, t=None):
 
     '''
-    :param G: a networkx/igraph object
+    :param G: a networkx object
+    :param node_name: int or string
     :param t: scalar, optional; when exponentiate multiply the adjacency matrix by t
 
     :return: total communicability of node k
     '''
 
-    # G = convert_graph_formats(G,nx.graph)
-    n = G.number_of_nodes()
-    e = ones(n)  # vector of all ones
-    Adj = nx.adjacency_matrix(G)
-    if t is not None:
-        Adj = Adj*t
-    tot_communicability = expm_multiply(Adj, e)
+    tot_communicability = total_communicability(G, t)
+    node_tc = tot_communicability[node_name]
+    return node_tc
 
-    return tot_communicability[k]
-
-def network_communicability(G, t=None):
+def total_network_communicability(G, t=None):
 
     '''
-    :param G: a networkx/igraph object
+    :param G: a networkx object
     :param t: scalar, optional; when exponentiate multiply the adjacency matrix by t
 
     :return: network communicability
@@ -59,3 +56,26 @@ def network_communicability(G, t=None):
     tot_communicability = expm_multiply(Adj, e)
     net_communicability= dot(e,tot_communicability)
     return net_communicability
+
+def edge_total_communicability(G, node_1, node_2, t=None):
+
+    '''
+    :param G: a networkx object
+    :param node_1: int or string denoting the node name
+    :param node_2: int or string denoting the node name
+    :param t: scalar, optional; when exponentiate multiply the adjacency matrix by t
+
+    :return: total communicability of edge (node_1, node_2)
+    '''
+
+    # G = convert_graph_formats(G,nx.graph)
+    n = G.number_of_nodes()
+    Adj = nx.adjacency_matrix(G)
+    node_list = G.nodes
+    if t is not None:
+        Adj = Adj * t
+    tot_communicability = expm_multiply(Adj, ones(n))
+    tot_communicability = dict(zip(G.nodes, tot_communicability))
+    edge_tc = tot_communicability[node_1]*tot_communicability[node_2]
+    return edge_tc
+
