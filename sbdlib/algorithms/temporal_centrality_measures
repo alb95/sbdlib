@@ -6,6 +6,7 @@ from scipy.sparse.linalg import cg
 from scipy.sparse import identity
 
 
+
 def graph_slice(g, t):
     '''
     extract a slice of the dynamic graph at time t in NetworkX format
