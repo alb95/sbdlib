@@ -64,11 +64,13 @@ def total_network_communicability(g, t=None, m=20):
     omega.append(u.dot(Adj.dot(u)))
     r = (Adj-omega[0]*identity(n))*x_0
     gamma.append(norm(r))
-    x_1 = r/norm(r)
+    if norm(r)!=0:
+        x_1 = r/norm(r)
     for i in range(1,m):
         omega.append(x_1.dot(Adj.dot(x_1)))
         x_2 = (Adj-omega[i]*identity(n))*x_1 - gamma[i-1]*x_0
-        gamma.append(norm(x_2))
+        if norm(x_2)!=0:
+            gamma.append(norm(x_2))
         x_0 = x_1
         x_1 = x_2/gamma[i]
     gamma = gamma[:-1]
