@@ -1,6 +1,8 @@
 import networkx as nx
 from scipy.sparse.linalg import expm_multiply
-from numpy import ones, dot
+from scipy.sparse import identity, diags
+from numpy.linalg import norm
+from numpy import ones, zeros, dot
 
 
 def total_communicability(G, t=None):
@@ -38,6 +40,48 @@ def node_total_communicability(G, node_name, t=None):
     node_tc = tot_communicability[node_name]
     return node_tc
 
+
+def total_network_communicability(g, t=None, m=20):
+
+    """
+    :param g: a networkx object
+    :param t: scalar, optional; when exponentiate multiply the adjacency matrix by t
+    :param m: integer, default 20; number of Lanczos iteration used
+
+    :return: network communicability
+    """
+
+    n = g.number_of_nodes()
+    Adj = nx.adjacency_matrix(g)
+    if t is not None:
+        Adj=Adj*t
+    e = ones(n)
+    u = e/norm(e)
+    omega = []
+    gamma = []
+    x_0 = u
+    #  computing Lanczos matrix J
+    omega.append(u.dot(Adj.dot(u)))
+    r = (Adj-omega[0]*identity(n))*x_0
+    gamma.append(norm(r))
+    x_1 = r/norm(r)
+    for i in range(1,m):
+        omega.append(x_1.dot(Adj.dot(x_1)))
+        x_2 = (Adj-omega[i]*identity(n))*x_1 - gamma[i-1]*x_0
+        gamma.append(norm(x_2))
+        x_0 = x_1
+        x_1 = x_2/gamma[i]
+    gamma = gamma[:-1]
+    J = diags(omega)
+    J = J + diags(gamma,1)
+    J = J + diags(gamma,-1)
+    e_1 = zeros(m)
+    e_1[0] = 1
+    tot_net_communicability = e_1.dot(expm_multiply(J,e_1))*n
+    return tot_net_communicability
+
+
+""" OLD_VERSION WITHOUT LANCZOS ITERATION
 def total_network_communicability(G, t=None):
 
     '''
@@ -56,17 +100,19 @@ def total_network_communicability(G, t=None):
     tot_communicability = expm_multiply(Adj, e)
     net_communicability= dot(e,tot_communicability)
     return net_communicability
+"""
+
 
 def edge_total_communicability(G, node_1, node_2, t=None):
 
-    '''
+    """
     :param G: a networkx object
     :param node_1: int or string denoting the node name
     :param node_2: int or string denoting the node name
     :param t: scalar, optional; when exponentiate multiply the adjacency matrix by t
 
     :return: total communicability of edge (node_1, node_2)
-    '''
+    """
 
     # G = convert_graph_formats(G,nx.graph)
     n = G.number_of_nodes()
@@ -78,4 +124,3 @@ def edge_total_communicability(G, node_1, node_2, t=None):
     tot_communicability = dict(zip(G.nodes, tot_communicability))
     edge_tc = tot_communicability[node_1]*tot_communicability[node_2]
     return edge_tc
-
