@@ -7,7 +7,6 @@ import networkx
 
 
 def trip_centrality(edge_list, alpha, epsilon=None):
-
     alpha_tilde = alpha ** (1 / 2)
     if len(edge_list[0]) == 4:
         # only 1 layer
@@ -57,7 +56,7 @@ def trip_centrality(edge_list, alpha, epsilon=None):
         for e in edge_list:
             primary_nodes.append(e[0])
             primary_nodes.append(e[1])
-            bisect.insort(times, e[2]) # TODO understand if it is better to add every time and then sort or in this way
+            bisect.insort(times, e[2])  # TODO understand if it is better to add every time and then sort or in this way
             bisect.insort(times, e[3])
             layers.append(e[4])
         primary_nodes = list(set(primary_nodes))
@@ -90,26 +89,24 @@ def trip_centrality(edge_list, alpha, epsilon=None):
         data = matrices_data[-1]
         # creating last matrix to compute (I+alpha_tilde A)*(K^-1)e
         matrix = csr_matrix((ones(len(data[0])), (data[0], data[1])), shape=(n_nodes, n_nodes), dtype=int)
-        centrality = auxiliary + alpha_tilde*(matrix.dot(centrality))
-        for data in matrices_data[n_times-2::-1]:
+        centrality = auxiliary + alpha_tilde * (matrix.dot(centrality))
+        for data in matrices_data[n_times - 2::-1]:
             #  (I+alpha_tilde AK)*centrality
             matrix = csr_matrix((ones(len(data[0])), (data[0], data[1])), shape=(n_nodes, n_nodes), dtype=int)
             centrality = centrality + alpha_tilde * matrix.dot(K.dot(centrality))  # TODO valutare ottimizzazione
         aggregated_centrality = zeros(n_primary)
         for i in range(n_primary):
-            aggregated_centrality = aggregated_centrality + centrality[i:n_primary+i]
+            aggregated_centrality = aggregated_centrality + centrality[i:n_primary + i]
         centrality = dict(zip(primary_nodes, aggregated_centrality))
     return centrality
 
 
 def betweenness_index(n_nodes, n_times, n_layers, node_index, time_index, layer_index):
-
-    index = n_nodes*n_times*(layer_index-1) + n_nodes*(time_index-1) + node_index-1
+    index = n_nodes * n_times * layer_index + n_nodes * time_index + node_index
     return index
 
 
-def betweenness_centrality(edge_list, alpha, epsilon):
-
+def betweenness_centrality(edge_list, delta_t, alpha, epsilon):
     # TODO input: edge_list with [departure_node, arrival_node, departure_time, arrival_time, layer] as rows
 
     n_edges = len(edge_list)
@@ -123,60 +120,69 @@ def betweenness_centrality(edge_list, alpha, epsilon):
         times.append(e[2])
         times.append(e[3])
         layers.append(e[4])
-        node_layer_time_dict[e[0]] = {e[4]: {e[2]: {e[1]: e[3]}}}
+        node_layer_time_dict[e[0]] = {e[4]: {e[2]: {e[3]: e[1]}}}  # departure: layer: time 1: time 2: arrival
     nodes = list(set(nodes))
     n_nodes = len(nodes)
-    times = sorted(set(times))
+    t_min = min(set(times))
+    t_max = max(set(times))
+    times = list(range(t_min, t_max+delta_t, delta_t))
     n_times = len(times)
     layers = list(set(layers))
     n_layers = len(layers)
-    row = []
-    column = []
-    weight = []
+    static_edges = []
     for e in edge_list:
         node_index_1 = nodes.index(e[0])
         time_index_1 = times.index(e[2])
         layer_index_1 = layers.index(e[4])
         row_index = betweenness_index(n_nodes, n_times, n_layers, node_index_1, time_index_1, layer_index_1)
-        row.append(row_index)
         node_index_2 = nodes.index(e[1])
         time_index_2 = times.index(e[3])
-        layer_index_2 = layers.index(e[4])
+        layer_index_2 = layer_index_1
         column_index = betweenness_index(n_nodes, n_times, n_layers, node_index_2, time_index_2, layer_index_2)
-        column.append(column_index)
-        weight.append(alpha + (1-alpha)*(time_index_2-time_index_1))
-
-        # add switching links
-        switching_row_to_add = ones(n_layers - 1) * column_index
-        switching_column_to_add = []
-        for i in range(n_layers-1):
-            if i != layer_index_2:
-                switching_column_to_add.append(betweenness_index(n_nodes, n_times, n_layers, node_index_2, time_index_2, i))
-        switching_weight_to_add = ones(n_layers - 1) * epsilon * alpha
-        row.append(switching_row_to_add)
-        column.append(switching_column_to_add)
-        weight.append(switching_weight_to_add)
-        # add waiting links
-        waiting_row_to_add = []
-        waiting_column_to_add = []
-        waiting_weight_to_add = []
-
-        for i in range(n_layers):
+        weight_index = alpha + (1 - alpha) * (time_index_2 - time_index_1)
+        static_edges.append((row_index, column_index, weight_index))
+        for layer in layers:
             t = None
+            temp = None
             if e[1] in node_layer_time_dict.keys():
-                if e[4] in node_layer_time_dict[e[1]].keys():
-                    temp = node_layer_time_dict[e[1]][e[4]]
-                    t = min(s for s in temp.keys() if s > e[3])
-            if t is not None:
-                temp[t]
-            waiting_row_to_add = []
-    return 1
+                if layer in node_layer_time_dict[e[1]].keys():
+                    temp = node_layer_time_dict[e[1]][layer]
+                    t = [s for s in temp.keys() if s > e[3]]
+                    if t:  # if t is neither the empty sequence nor None
+                        t = min(t)
+
+                        # create switching links
+
+                        row_switch_idx = row_index
+                        node_switch_idx_2 = node_index_2
+                        time_switch_idx_2 = time_index_2
+                        layer_switch_idx_2 = layers.index(layer)
+                        column_switch_idx = betweenness_index(n_nodes, n_times, n_layers, node_switch_idx_2,
+                                                              time_switch_idx_2, layer_switch_idx_2)
+                        weight_switch_idx = alpha * epsilon
+                        static_edges.append((row_switch_idx, column_switch_idx, weight_switch_idx))
+
+                        # create waiting links
+
+                        time_waiting_idx_1 = time_switch_idx_2
+                        row_waiting_idx = column_switch_idx
+                        node_waiting_idx_2 = node_switch_idx_2
+                        time_waiting_idx_2 = times.index(t)
+                        layer_waiting_idx_2 = layer_switch_idx_2
+                        column_waiting_idx = betweenness_index(n_nodes, n_times, n_layers, node_switch_idx_2,
+                                                               time_switch_idx_2, layer_switch_idx_2)
+                        weight_waiting_idx = time_waiting_idx_2 - time_waiting_idx_1
+                        static_edges.append((row_waiting_idx, column_waiting_idx, weight_waiting_idx))
+    # create static network
+    G = nx.DiGraph()
+    G.add_weighted_edges_from(static_edges)
+    print(G.edges)
+    return G
 
 
-edges = [[1, 2, 3, 4], [2, 5, 3, 5], [1, 6, 4, 5]]
-edges = [[1, 2, 3, 4, 'rat'], [3, 4, 3, 4, 'dog'], [5, 6, 3, 4, 'house']]
-print(trip_centrality(edges, 0.5, 0.3))
-y = 2
+edges = [[1, 2, 3, 4, 'lambda'], [2, 1, 3, 4, 'mu'], [1, 2, 4, 5, 'lambda'], [1, 2, 7, 8, 'lambda'], [2, 1, 5, 6, 'mu']]
+# print(trip_centrality(edges, 0.5, 0.3))
+betweenness_centrality(edges, 1, 0.5, 0.3)
 # if len(edge_list[0]==5): # multiple layers
 
 """
