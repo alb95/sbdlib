@@ -12,10 +12,10 @@ setup(name='sbdlib', # SoBigData Library
       long_description_content_type="text/markdown",
       url='https://github.com/alb95/NetworkProject',
       packages=setuptools.find_packages(),
-      classifiers=[                                       #???????????
-          "Programming Language :: Python :: 3",          #???????????
-          "License :: OSI Approved :: MIT License",       #???????????
-          "Operating System :: OS Independent",           #???????????
+      classifiers=[                                       
+          "Programming Language :: Python :: 3",          
+          "License :: OSI Approved :: MIT License",       #TODO
+          "Operating System :: OS Independent",           
       ],
       python_requires='>=3.6',
       )
